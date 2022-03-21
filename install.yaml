@@ -1,0 +1,3 @@
+- import_playbook: install-db.yaml
+- import_playbook: install-kc.yaml
+- import_playbook: install-lb.yaml

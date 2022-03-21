@@ -1,0 +1,68 @@
+- name: Install Traefik
+  hosts: lb
+  gather_facts: yes
+  become: yes
+  tasks:
+  - name: Create the traefik user
+    user:
+      name: traefik
+      system: true
+      home: '/opt/traefik'
+      create_home: false
+      state: present
+
+  - name: Skaffold /opt/traefik
+    file:
+      path: '{{ item }}'
+      state: directory
+      owner: traefik
+    loop:
+    - /opt/traefik/etc
+    - /opt/traefik/etc/conf.d
+    - /opt/traefik/bin
+
+  - name: Install traefik
+    unarchive:
+      src: traefik_v2.6.1_linux_amd64.tar.gz
+      dest: /opt/traefik/bin
+      owner: traefik
+
+  - name: Install the systemd units
+    template:
+      src: traefik.service
+      dest: /etc/systemd/system/traefik.service
+    register: systemd_unit
+    tags: config
+
+  - name: Install the systemd unit configuration
+    template:
+      src: traefik.env
+      dest: /opt/traefik/etc/traefik.env
+    register: unit_config
+    tags: config
+
+  - name: Reload systemd
+    systemd:
+      daemon-reload: yes
+    when: systemd_unit.changed
+    tags: config
+
+  - name: Configure traefik
+    template:
+      src: traefik.yaml
+      dest: /opt/traefik/etc/traefik.yaml
+    register: traefik_config
+    tags: config
+
+  - name: Configure traefik
+    template:
+      src: traefik-keycloak.yaml
+      dest: /opt/traefik/etc/conf.d/keycloak.yaml
+    tags: config
+
+  - name: Start traefik
+    systemd:
+      name: traefik.service
+      state: restarted
+    when: systemd_unit.changed or unit_config.changed or traefik_config.changed
+    tags: config

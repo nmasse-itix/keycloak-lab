@@ -1,0 +1,6 @@
+db_username: keycloak
+db_name: keycloak
+db_hostname: db.itix.lab
+keycloak_dir: /opt/rh-sso-7.5
+keycloak_url: http://lb.itix.lab
+keycloak_admin_username: admin

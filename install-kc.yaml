@@ -1,0 +1,105 @@
+- name: Install Keycloak
+  hosts: keycloak
+  gather_facts: yes
+  become: yes
+  tasks:
+  - name: Create the keycloak user
+    user:
+      name: keycloak
+      system: true
+      home: '{{ keycloak_dir }}'
+      create_home: false
+      state: present
+
+  - name: Install pre-requisites
+    dnf:
+      name:
+      - unzip
+      - java-11-openjdk-headless
+      state: installed
+
+  - name: Unpack Keycloak
+    unarchive:
+      src: 'rh-sso-7.5.0-server-dist.zip'
+      dest: /opt
+      owner: keycloak
+      creates: '{{ keycloak_dir }}'
+
+  - name: Upload Keycloak patches
+    copy:
+      src: '{{ item }}'
+      dest: '/tmp/{{ item }}'
+    loop:
+    - rh-sso-7.5.1-patch.zip
+    - rhsso-1974.zip
+    - rhsso-2054.zip
+
+  - name: Apply Keycloak patches
+    command: '{{ keycloak_dir }}/bin/jboss-cli.sh --command="patch apply /tmp/{{ item }}"'
+    loop:
+    - rh-sso-7.5.1-patch.zip
+    - rhsso-1974.zip
+    - rhsso-2054.zip
+    become_user: keycloak
+    
+  - name: Create modules/system/layers/keycloak/org/postgresql/jdbc/main
+    file:
+      state: directory
+      path: '{{ keycloak_dir }}/modules/system/layers/base/org/postgresql/jdbc/main'
+      owner: keycloak
+
+  - name: Copy postgresql JDBC driver
+    copy:
+      src: postgresql-42.3.3.jar
+      dest: '{{ keycloak_dir }}/modules/system/layers/base/org/postgresql/jdbc/main'
+      owner: keycloak
+
+  - name: Reference the jdbc driver in module.xml
+    template:
+      src: module.xml.j2
+      dest: '{{ keycloak_dir }}/modules/system/layers/base/org/postgresql/jdbc/main/module.xml'
+      owner: keycloak
+
+  # Sample cli scripts are here: https://github.com/keycloak/keycloak-containers/tree/15.0.2/server/tools/cli
+  - name: Upload the Keycloak configuration script
+    template:
+      src: keycloak-custom.cli
+      dest: '{{ keycloak_dir }}/custom.cli'
+      owner: keycloak
+
+  - name: Configure keycloak
+    command: '{{ keycloak_dir }}/bin/jboss-cli.sh --file={{ keycloak_dir }}/custom.cli'
+    become_user: keycloak
+
+  - name: Install the keycloak service unit
+    template:
+      src: keycloak.service
+      dest: /etc/systemd/system/keycloak.service
+    register: systemd_unit
+    tags: config
+
+  - name: Configure the keycloak service unit
+    template:
+      src: keycloak.env
+      dest: '{{ keycloak_dir }}/keycloak.env'
+    register: unit_config
+    tags: config
+
+  - name: Reload systemd
+    systemd:
+      daemon-reload: yes
+    when: systemd_unit.changed
+    tags: config
+
+  - name: Create the initial admin
+    command: '{{ keycloak_dir }}/bin/add-user-keycloak.sh --user {{ keycloak_admin_username }} --password {{ keycloak_admin_password }}'
+    # only one node needs to execute this command
+    when: ansible_host == "sso1.itix.lab"
+
+  - name: Start keycloak
+    systemd:
+      name: keycloak.service
+      state: restarted
+    when: systemd_unit.changed or unit_config.changed
+    tags: config
+

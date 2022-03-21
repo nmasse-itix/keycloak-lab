@@ -1,0 +1,94 @@
+- name: Install PostgreSQL
+  hosts: db
+  gather_facts: yes
+  become: yes
+  tasks:
+  - name: Install PostgreSQL
+    dnf:
+      name:
+      - postgresql-server
+      - postgresql-docs
+      - postgresql-upgrade
+      - postgresql-contrib
+      - python3-psycopg2 # Needed by the community.general.postgresql_* tasks
+      state: installed
+
+  - name: Initialize the database
+    command: postgresql-setup --initdb
+    args:
+      creates: /var/lib/pgsql/data/log/
+
+  - name: Listen on all network interfaces
+    lineinfile:
+      insertbefore: '^ *#* *listen_addresses *='
+      path: /var/lib/pgsql/data/postgresql.conf
+      regexp: '^ *listen_addresses *= *'
+      line: "listen_addresses = '0.0.0.0'"
+    register: postgresql_conf1
+
+  - name: Enable scram-sha-256
+    lineinfile:
+      insertbefore: '^ *#* *password_encryption *='
+      path: /var/lib/pgsql/data/postgresql.conf
+      regexp: '^ *password_encryption *= *'
+      line: "password_encryption = scram-sha-256"
+    register: postgresql_conf2
+
+  - name: Enable password authentication instead of ident
+    community.general.postgresql_pg_hba:
+      dest: /var/lib/pgsql/data/pg_hba.conf
+      contype: host
+      databases: all
+      users: all
+      address: '{{ item.address }}'
+      method: '{{ item.method }}'
+      state: '{{ item.state }}'
+    loop:
+    - address: 127.0.0.1/32
+      method: scram-sha-256
+      state: present
+    - address: ::1/128
+      method: scram-sha-256
+      state: present
+    - address: 0.0.0.0/0
+      method: scram-sha-256
+      state: present
+    register: pghba_conf
+
+  - name: Reload PostgreSQL when needed
+    systemd:
+      name: postgresql
+      enabled: true
+      state: reloaded
+    when: postgresql_conf1.changed or postgresql_conf2.changed or pghba_conf.changed
+
+  - name: Ensure the PostgreSQL service is started and enabled
+    systemd:
+      name: postgresql
+      enabled: true
+      state: started
+
+  - name: Wait for PostgreSQL to be ready
+    community.general.postgresql_query:
+      db: template1
+      query: SELECT version()
+    become_user: postgres
+    retries: 20
+    delay: 5
+    register: healthcheck
+    until: not healthcheck.failed
+
+  - name: Create the PostgreSQL database for Keycloak
+    community.general.postgresql_db:
+      name: '{{ db_name }}'
+    become_user: postgres
+
+  - name: Create the PostgreSQL user for Keycloak
+    community.general.postgresql_user:
+      name: '{{ db_username }}'
+      password: '{{ db_password }}'
+      login_db: '{{ db_name }}'
+      priv: ALL
+    become_user: postgres
+    environment:
+      PGOPTIONS: "-c password_encryption=scram-sha-256"

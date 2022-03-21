@@ -1,0 +1,16 @@
+all:
+  vars:
+    ansible_user: nicolas
+  children:
+    db:
+      hosts:
+        db.itix.lab:
+    keycloak:
+      hosts:
+        sso1.itix.lab:
+        sso2.itix.lab:
+        sso3.itix.lab:
+    lb:
+      hosts:
+        lb.itix.lab:
+

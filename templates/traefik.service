@@ -1,0 +1,19 @@
+[Unit]
+Description=The Cloud Native Application Proxy
+Wants=network.target
+After=network-online.target
+
+[Service]
+Restart=always
+Type=simple
+EnvironmentFile=/opt/traefik/etc/traefik.env
+ExecStart=/opt/traefik/bin/traefik
+WorkingDirectory=/opt/traefik/etc
+User=traefik
+Group=traefik
+
+# Allow traefik to bind to <1024 ports
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target default.target

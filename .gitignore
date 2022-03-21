@@ -1,0 +1,5 @@
+ansible.cfg
+vault.yaml
+rhsso*.zip
+rh-sso*.zip
+.ansible-vault-password

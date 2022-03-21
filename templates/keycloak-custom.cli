@@ -1,0 +1,26 @@
+embed-server --server-config=standalone-ha.xml --std-out=echo
+
+/subsystem=undertow/server=default-server/http-listener=default: write-attribute(name=proxy-address-forwarding, value=true)
+/subsystem=undertow/server=default-server/https-listener=https: write-attribute(name=proxy-address-forwarding, value=true)
+
+/subsystem=datasources/data-source=KeycloakDS: remove()
+/subsystem=datasources/data-source=KeycloakDS: add(jndi-name=java:jboss/datasources/KeycloakDS,enabled=true,use-java-context=true,use-ccm=true, connection-url=jdbc:postgresql://{{ db_hostname }}/{{ db_name }}, driver-name=postgresql)
+/subsystem=datasources/data-source=KeycloakDS: write-attribute(name=user-name, value={{ db_username }})
+/subsystem=datasources/data-source=KeycloakDS: write-attribute(name=password, value={{ db_password }})
+/subsystem=datasources/data-source=KeycloakDS: write-attribute(name=check-valid-connection-sql, value="SELECT 1")
+/subsystem=datasources/data-source=KeycloakDS: write-attribute(name=background-validation, value=true)
+/subsystem=datasources/data-source=KeycloakDS: write-attribute(name=background-validation-millis, value=60000)
+/subsystem=datasources/data-source=KeycloakDS: write-attribute(name=flush-strategy, value=IdleConnections)
+/subsystem=datasources/jdbc-driver=postgresql:add(driver-name=postgresql, driver-module-name=org.postgresql.jdbc, driver-xa-datasource-class-name=org.postgresql.xa.PGXADataSource)
+
+/subsystem=keycloak-server/spi=connectionsJpa/provider=default:write-attribute(name=properties.schema,value=public)
+
+/subsystem=infinispan/cache-container=keycloak/distributed-cache=sessions: write-attribute(name=owners, value=3)
+/subsystem=infinispan/cache-container=keycloak/distributed-cache=offlineSessions: write-attribute(name=owners, value=3)
+/subsystem=infinispan/cache-container=keycloak/distributed-cache=loginFailures: write-attribute(name=owners, value=3)
+/subsystem=infinispan/cache-container=keycloak/distributed-cache=clientSessions: write-attribute(name=owners, value=3)
+/subsystem=infinispan/cache-container=keycloak/distributed-cache=offlineClientSessions: write-attribute(name=owners, value=3)
+/subsystem=infinispan/cache-container=keycloak/distributed-cache=actionTokens: write-attribute(name=owners, value=3)
+/subsystem=infinispan/cache-container=keycloak/distributed-cache=authenticationSessions: write-attribute(name=owners, value=1)
+
+stop-embedded-server

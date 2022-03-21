@@ -1,0 +1,13 @@
+[Unit]
+Description=Red Hat SSO
+After=network.target
+
+[Service]
+ExecStart={{ keycloak_dir }}/bin/standalone.sh --server-config=standalone-ha.xml $KEYCLOAK_OPTIONS
+WorkingDirectory={{ keycloak_dir }}
+User=keycloak
+EnvironmentFile={{ keycloak_dir }}/keycloak.env
+Type=simple
+
+[Install]
+WantedBy=multi-user.target default.target

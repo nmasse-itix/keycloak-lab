@@ -1,0 +1,3 @@
+collections:
+- name: community.general
+  version: '>=2.2.0' # fix a bug with nmcli and bridge interfaces

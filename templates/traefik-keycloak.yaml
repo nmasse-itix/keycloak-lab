@@ -1,0 +1,27 @@
+http:
+  routers:
+    keycloak-http:
+      rule: "Host(`lb.itix.lab`)"
+      entryPoints:
+        - http
+        - https
+      middlewares:
+      service: "keycloak"
+    keycloak-https:
+      rule: "Host(`lb.itix.lab`)"
+      entryPoints:
+        - http
+        - https
+      middlewares:
+      service: "keycloak"
+      tls: {}
+  services:
+    keycloak:
+      loadBalancer:
+        servers:
+        - url: "http://sso1.itix.lab:8080"
+        - url: "http://sso2.itix.lab:8080"
+        - url: "http://sso3.itix.lab:8080"
+        # Sticky session is required for users to login
+        sticky:
+          cookie: {}
