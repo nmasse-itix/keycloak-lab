@@ -23,4 +23,10 @@ embed-server --server-config=standalone-ha.xml --std-out=echo
 /subsystem=infinispan/cache-container=keycloak/distributed-cache=actionTokens: write-attribute(name=owners, value=3)
 /subsystem=infinispan/cache-container=keycloak/distributed-cache=authenticationSessions: write-attribute(name=owners, value=1)
 
+/subsystem=jgroups/stack=udp/protocol=PING:remove()
+/subsystem=jgroups/stack=udp/protocol=TCPPING:add(add-index=0, properties=initial_hosts="{{ groups.keycloak | product(["[7600]"]) | map('join') | join(',') }}")
+/subsystem=jgroups/stack=tcp/protocol=MPING:remove()
+/subsystem=jgroups/stack=tcp/protocol=TCPPING:add(add-index=0, properties=initial_hosts="{{ groups.keycloak | product(["[7600]"]) | map('join') | join(',') }}")
+/subsystem=jgroups/channel=ee:write-attribute(name="stack", value=tcp)
+
 stop-embedded-server
