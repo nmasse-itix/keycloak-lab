@@ -18,6 +18,28 @@
       - java-11-openjdk-headless
       state: installed
 
+  - name: Check if the keycloak systemd unit exists
+    stat:
+      path: /etc/systemd/system/keycloak.service
+    register: stat_kc_unit
+
+  - name: Stop Keycloak
+    systemd:
+      name: keycloak.service
+      state: stopped
+    when: stat_kc_unit.stat.exists
+
+  - name: Check if an existing version of keycloak exists
+    stat:
+      path: '{{ keycloak_dir }}'
+    register: stat_kc_dir
+
+  - name: Remove existing installation of Keycloak
+    file:
+      path: '{{ keycloak_dir }}'
+      state: absent
+    when: stat_kc_dir.stat.exists
+
   - name: Unpack Keycloak
     unarchive:
       src: 'rh-sso-7.5.0-server-dist.zip'
