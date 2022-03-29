@@ -18,6 +18,10 @@ http:
   services:
     keycloak:
       loadBalancer:
+        healthCheck:
+          path: /auth/realms/master
+          interval: "10s"
+          timeout: "3s"
         servers:
         - url: "http://sso1.itix.lab:8080"
         - url: "http://sso2.itix.lab:8080"
