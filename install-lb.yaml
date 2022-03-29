@@ -47,6 +47,12 @@
     when: systemd_unit.changed
     tags: config
 
+  - name: Enable traefik unit
+    systemd:
+      enabled: yes
+      name: traefik.service
+    tags: config
+
   - name: Configure traefik
     template:
       src: traefik.yaml

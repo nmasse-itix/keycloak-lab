@@ -96,6 +96,12 @@
     # only one node needs to execute this command
     when: ansible_host == "sso1.itix.lab"
 
+  - name: Enable keycloak unit
+    systemd:
+      enabled: yes
+      name: keycloak.service
+    tags: config
+
   - name: Start keycloak
     systemd:
       name: keycloak.service
