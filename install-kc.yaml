@@ -94,7 +94,7 @@
   - name: Create the initial admin
     command: '{{ keycloak_dir }}/bin/add-user-keycloak.sh --user {{ keycloak_admin_username }} --password {{ keycloak_admin_password }}'
     # only one node needs to execute this command
-    when: ansible_host == "sso1.itix.lab"
+    when: ansible_host == groups.keycloak|first
 
   - name: Enable keycloak unit
     systemd:
