@@ -1,14 +1,14 @@
 http:
   routers:
     keycloak-http:
-      rule: "Host(`lb.itix.lab`)"
+      rule: "Host(`{{ inventory_hostname }}`)"
       entryPoints:
         - http
         - https
       middlewares:
       service: "keycloak"
     keycloak-https:
-      rule: "Host(`lb.itix.lab`)"
+      rule: "Host(`{{ inventory_hostname }}`)"
       entryPoints:
         - http
         - https
@@ -23,9 +23,9 @@ http:
           interval: "10s"
           timeout: "3s"
         servers:
-        - url: "http://sso1.itix.lab:8080"
-        - url: "http://sso2.itix.lab:8080"
-        - url: "http://sso3.itix.lab:8080"
+{% for host in groups.keycloak %}
+        - url: "http://{{ host }}:8080"
+{% endfor %}
         # Sticky session is required for users to login
         sticky:
           cookie: {}
